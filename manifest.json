@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "AI Search Chat",
+  "version": "1.0",
+  "description": "A basic chat extension with side panel",
+  "icons": {
+    "128": "/icon.jpg"
+  },
+  "permissions": [
+    "sidePanel",
+    "activeTab",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Open Chat Side Panel",
+    "default_icon": "icon.jpg"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
