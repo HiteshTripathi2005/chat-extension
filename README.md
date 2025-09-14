@@ -1,6 +1,6 @@
 # AI Webpage Assistant - Gemini Powered
 
-An intelligent Chrome extension that transforms any webpage into an interactive AI assistant using Google's Gemini 2.5 Flash model. Ask questions, get summaries, analyze content, and more - all while browsing.
+An intelligent Chrome extension that transforms any webpage into an interactive AI assistant using Google's Gemini 2.0 Flash model. Ask questions, get summaries, analyze content, and more - all while browsing.
 
 ## 🚀 Features
 
@@ -12,7 +12,7 @@ An intelligent Chrome extension that transforms any webpage into an interactive 
 - **Multi-Language Support**: Automatic translation and multilingual responses
 
 ### Advanced Features
-- **Real-time Responses**: Powered by Gemini 2.5 Flash for fast, accurate answers
+- **Real-time Responses**: Powered by Gemini 2.0 Flash for fast, accurate answers
 - **Conversation Memory**: Maintains context across multiple interactions
 - **Action Suggestions**: Smart recommendations based on page content
 - **Privacy-First**: Content processed securely with user consent
@@ -97,11 +97,13 @@ An intelligent Chrome extension that transforms any webpage into an interactive 
 
 ```
 ├── manifest.json          # Extension configuration and permissions
-├── background.js          # Service worker for API calls and coordination
-├── sidepanel.html         # Main UI layout and styling
-├── sidepanel.js           # Chat logic and user interactions
-├── icon.jpg              # Extension icon
-└── README.md             # This documentation
+├── logo.png              # Extension icon
+├── README.md             # This documentation
+└── src/
+    ├── background.js     # Service worker for API calls and coordination
+    ├── sidepanel.html    # Main UI layout and styling
+    ├── sidepanel.js      # Chat logic and user interactions
+    └── index.css         # Styles for the side panel
 ```
 
 ## 🔧 Technical Details
@@ -109,7 +111,7 @@ An intelligent Chrome extension that transforms any webpage into an interactive 
 ### Architecture
 - **Frontend**: HTML/CSS/JavaScript side panel
 - **Backend**: Chrome extension service worker
-- **AI Engine**: Google Gemini 2.5 Flash via REST API
+- **AI Engine**: Google Gemini 2.0 Flash via REST API
 - **Storage**: Chrome secure storage for API keys
 - **Content Access**: Chrome scripting API for webpage content
 
@@ -167,8 +169,8 @@ We welcome contributions! Here's how to get started:
 ### Development Setup
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/ai-webpage-assistant.git
-cd ai-webpage-assistant
+git clone https://github.com/HiteshTripathi2005/chat-extension.git
+cd chat-extension
 
 # Make changes to files
 # Test in Chrome with "Load unpacked"
@@ -209,7 +211,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🙏 Acknowledgments
 
-- Google AI for the Gemini 2.5 Flash model
+- Google AI for the Gemini 2.0 Flash model
 - Chrome Extensions documentation
 - Open source community for inspiration
 

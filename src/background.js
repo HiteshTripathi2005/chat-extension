@@ -2,7 +2,7 @@
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
 
 // Initialize default API key for testing (remove in production)
-const DEFAULT_API_KEY = 'AIzaSyDpVQVMoTJElXHW1SwzvvyY_mU-B9tuZvU';
+// const DEFAULT_API_KEY = 'add your default API key here for testing';
 
 // Handle extension icon click
 chrome.action.onClicked.addListener((tab) => {
