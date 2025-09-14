@@ -26,23 +26,15 @@
     .header-title {
       font-size: 16px;
     }
-    .close-button {
+    .header-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    .settings-button, .close-button {
       background: none;
       border: none;
       color: #cccccc;
       font-size: 18px;
-      cursor: pointer;
-      padding: 2px 6px;
-      transition: color 0.2s;
-    }
-    .close-button:hover {
-      color: #ffffff;
-    }
-    .close-button {
-      background: none;
-      border: none;
-      color: #ffffff;
-      font-size: 20px;
       cursor: pointer;
       padding: 5px;
       border-radius: 50%;
@@ -51,7 +43,11 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
+    }
+    .settings-button:hover, .close-button:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
     }
     .close-button:hover {
       background: rgba(255, 255, 255, 0.1);
@@ -138,16 +134,150 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+    
+    /* Settings Panel Styles */
+    .settings-panel {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #1a1a1a;
+      display: none;
+      flex-direction: column;
+      z-index: 1000;
+    }
+    .settings-panel.show {
+      display: flex;
+    }
+    .settings-header {
+      background: #2d2d2d;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #404040;
+    }
+    .settings-header h3 {
+      margin: 0;
+      color: #ffffff;
+      font-size: 18px;
+    }
+    .close-settings {
+      background: none;
+      border: none;
+      color: #cccccc;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 5px;
+      transition: color 0.2s;
+    }
+    .close-settings:hover {
+      color: #ffffff;
+    }
+    .settings-content {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .setting-group {
+      margin-bottom: 20px;
+    }
+    .setting-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #ffffff;
+      font-weight: 500;
+    }
+    .setting-group input {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #404040;
+      border-radius: 8px;
+      background: #1e1e1e;
+      color: #ffffff;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    .setting-group input:focus {
+      border-color: #007bff;
+      outline: none;
+    }
+    .setting-group small {
+      display: block;
+      margin-top: 5px;
+      color: #888888;
+      font-size: 12px;
+    }
+    .setting-group small a {
+      color: #007bff;
+      text-decoration: none;
+    }
+    .setting-group small a:hover {
+      text-decoration: underline;
+    }
+    .save-button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    .save-button:hover {
+      background: #0056b3;
+    }
+    .save-button:disabled {
+      background: #404040;
+      cursor: not-allowed;
+    }
+    #settingsStatus {
+      margin-top: 10px;
+      font-size: 14px;
+      min-height: 20px;
+    }
+    .status-success {
+      color: #28a745;
+    }
+    .status-error {
+      color: #dc3545;
+    }
   </style>
 </head>
 <body>
   <div class="header">
-    <div class="header-title">AI Search</div>
-    <button class="close-button" id="closeButton" title="Close">&times;</button>
+    <div class="header-title">AI Webpage Assistant</div>
+    <div class="header-buttons">
+      <button class="settings-button" id="settingsButton" title="Settings">⚙️</button>
+      <button class="close-button" id="closeButton" title="Close">&times;</button>
+    </div>
   </div>
   <div class="chat-container" id="chat"></div>
+  
+  <!-- Settings Panel -->
+  <div class="settings-panel" id="settingsPanel">
+    <div class="settings-header">
+      <h3>Settings</h3>
+      <button class="close-settings" id="closeSettings">&times;</button>
+    </div>
+    <div class="settings-content">
+      <div class="setting-group">
+        <label for="apiKey">Google AI API Key</label>
+        <input type="password" id="apiKey" placeholder="Enter your Google AI API key">
+        <small>Get your free API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></small>
+      </div>
+      <div class="setting-group">
+        <button id="saveSettings" class="save-button">Save Settings</button>
+        <div id="settingsStatus"></div>
+      </div>
+    </div>
+  </div>
+  
   <div class="input-area">
-    <input type="text" id="message" placeholder="Type text to search on this page...">
+    <input type="text" id="message" placeholder="Ask me anything about this page...">
     <button id="sendButton">Send</button>
   </div>
   <script src="sidepanel.js"></script>
