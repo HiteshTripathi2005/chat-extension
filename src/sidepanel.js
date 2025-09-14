@@ -128,9 +128,9 @@ async function sendMessage() {
   addMessage(message, 'user');
   messageInput.value = '';
 
-  // Disable input during processing
+  // add loading state
   sendButton.disabled = true;
-  sendButton.textContent = 'Thinking...';
+  sendButton.textContent = '...';
 
   try {
     // Send message to background script for AI processing
