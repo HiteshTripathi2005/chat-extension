@@ -4,7 +4,9 @@
   "description": "An intelligent Chrome extension that transforms any webpage into an interactive AI assistant using Google's Gemini 2.0 Flash model. Ask questions, get summaries, analyze content, and more - all while browsing.",
   "main": "index.js",
   "scripts": {
-    "build": "webpack"
+    "build": "webpack",
+    "watch": "webpack --watch",
+    "dev": "webpack --watch --mode development"
   },
   "repository": {
     "type": "git",
@@ -22,6 +24,7 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
+    "@google/genai": "^1.19.0",
     "axios": "^1.12.2",
     "lodash": "^4.17.21"
   }

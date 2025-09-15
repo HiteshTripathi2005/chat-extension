@@ -75,6 +75,25 @@ body {
       color: #ffffff;
       border: 1px solid #555555;
     }
+    .message.streaming {
+      border: 2px solid #007bff;
+      position: relative;
+    }
+    .message.streaming::after {
+      content: '';
+      position: absolute;
+      bottom: 5px;
+      right: 10px;
+      width: 8px;
+      height: 8px;
+      background: #007bff;
+      border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
     .input-area {
       display: flex;
       padding: 16px 20px;

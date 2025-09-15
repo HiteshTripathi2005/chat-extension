@@ -172,8 +172,21 @@ We welcome contributions! Here's how to get started:
 git clone https://github.com/HiteshTripathi2005/chat-extension.git
 cd chat-extension
 
-# Make changes to files
-# Test in Chrome with "Load unpacked"
+# Install dependencies
+bun install
+
+# Development workflow
+bun run watch    # Auto-rebuild on file changes (recommended)
+# or
+bun run dev      # Same as watch with development mode
+# or
+bun run build    # One-time build
+
+# Test in Chrome
+# 1. Go to chrome://extensions/
+# 2. Enable "Developer mode"
+# 3. Click "Load unpacked" and select the project folder
+# 4. Make changes and see them auto-reload
 
 # Submit pull request
 ```

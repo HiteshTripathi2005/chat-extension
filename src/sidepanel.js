@@ -1,11 +1,14 @@
 // Global variables
 let apiKey = '';
 let conversationHistory = [];
+let currentStreamingMessage = null;
+let isStreaming = false;
 
 // Initialize the extension
 document.addEventListener('DOMContentLoaded', function() {
   loadSettings();
   setupEventListeners();
+  setupMessageListeners();
 });
 
 function setupEventListeners() {
@@ -36,6 +39,19 @@ function setupEventListeners() {
   // Close button
   document.getElementById('closeButton').addEventListener('click', function() {
     window.close();
+  });
+}
+
+function setupMessageListeners() {
+  // Listen for streaming messages from background script
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'streamChunk') {
+      handleStreamChunk(request);
+    } else if (request.action === 'streamComplete') {
+      handleStreamComplete(request);
+    } else if (request.action === 'streamError') {
+      handleStreamError(request);
+    }
   });
 }
 
@@ -124,48 +140,41 @@ async function sendMessage() {
     return;
   }
 
+  // Prevent multiple concurrent requests
+  if (isStreaming) {
+    return;
+  }
+
   // Add user message to chat
   addMessage(message, 'user');
   messageInput.value = '';
 
-  // add loading state
+  // Add to conversation history
+  conversationHistory.push({ role: 'user', content: message });
+
+  // Add loading state and streaming indicator
   sendButton.disabled = true;
-  sendButton.textContent = '...';
+  sendButton.textContent = 'Thinking...';
+  isStreaming = true;
+
+  // Create streaming message placeholder
+  addStreamingMessage();
 
   try {
-    // Send message to background script for AI processing
-    const response = await chrome.runtime.sendMessage({
-      action: 'askAI',
+    // Send message to background script for streaming AI processing
+    chrome.runtime.sendMessage({
+      action: 'askAIStream',
       message: message,
       history: conversationHistory
     });
 
-    if (chrome.runtime.lastError) {
-      throw new Error(chrome.runtime.lastError.message);
-    }
-
-    if (response.error) {
-      throw new Error(response.error);
-    }
-
-    // Add AI response to chat
-    addMessage(response.reply, 'bot');
-
-    // Update conversation history
-    conversationHistory.push({ role: 'user', content: message });
-    conversationHistory.push({ role: 'assistant', content: response.reply });
-
-    // Keep only last 10 messages to avoid token limits
-    if (conversationHistory.length > 20) {
-      conversationHistory = conversationHistory.slice(-20);
-    }
-
   } catch (error) {
     console.error('Error sending message:', error);
+    removeStreamingMessage();
     addMessage('Sorry, I encountered an error. Please try again.', 'bot');
-  } finally {
     sendButton.disabled = false;
     sendButton.textContent = 'Send';
+    isStreaming = false;
   }
 }
 
@@ -176,4 +185,69 @@ function addMessage(text, sender) {
   messageDiv.textContent = text;
   chat.appendChild(messageDiv);
   chat.scrollTop = chat.scrollHeight;
+}
+
+function addStreamingMessage() {
+  const chat = document.getElementById('chat');
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'message bot streaming';
+  messageDiv.textContent = '';
+  chat.appendChild(messageDiv);
+  currentStreamingMessage = messageDiv;
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function removeStreamingMessage() {
+  if (currentStreamingMessage) {
+    currentStreamingMessage.remove();
+    currentStreamingMessage = null;
+  }
+}
+
+function handleStreamChunk(request) {
+  if (currentStreamingMessage && request.chunk) {
+    currentStreamingMessage.textContent += request.chunk;
+    const chat = document.getElementById('chat');
+    chat.scrollTop = chat.scrollHeight;
+  }
+}
+
+function handleStreamComplete(request) {
+  if (currentStreamingMessage && request.fullText) {
+    currentStreamingMessage.textContent = request.fullText;
+    currentStreamingMessage.classList.remove('streaming');
+
+    // Update conversation history
+    const lastUserMessage = conversationHistory[conversationHistory.length - 1];
+    if (lastUserMessage && lastUserMessage.role === 'user') {
+      conversationHistory.push({ role: 'assistant', content: request.fullText });
+    }
+
+    // Keep only last 10 messages to avoid token limits
+    if (conversationHistory.length > 20) {
+      conversationHistory = conversationHistory.slice(-20);
+    }
+  }
+
+  // Reset streaming state
+  currentStreamingMessage = null;
+  isStreaming = false;
+
+  // Reset button
+  const sendButton = document.getElementById('sendButton');
+  sendButton.disabled = false;
+  sendButton.textContent = 'Send';
+}
+
+function handleStreamError(request) {
+  removeStreamingMessage();
+  addMessage(request.error || 'Sorry, I encountered an error. Please try again.', 'bot');
+
+  // Reset streaming state
+  isStreaming = false;
+
+  // Reset button
+  const sendButton = document.getElementById('sendButton');
+  sendButton.disabled = false;
+  sendButton.textContent = 'Send';
 }
