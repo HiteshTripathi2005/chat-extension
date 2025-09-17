@@ -4,6 +4,9 @@ let conversationHistory = [];
 let currentStreamingMessage = null;
 let isStreaming = false;
 
+// Import marked for markdown rendering
+import { marked } from 'marked';
+
 // Initialize the extension
 document.addEventListener('DOMContentLoaded', function() {
   loadSettings();
@@ -182,7 +185,14 @@ function addMessage(text, sender) {
   const chat = document.getElementById('chat');
   const messageDiv = document.createElement('div');
   messageDiv.className = 'message ' + sender;
-  messageDiv.textContent = text;
+  
+  // Render markdown for bot messages, plain text for user messages
+  if (sender === 'bot') {
+    messageDiv.innerHTML = marked.parse(text);
+  } else {
+    messageDiv.textContent = text;
+  }
+  
   chat.appendChild(messageDiv);
   chat.scrollTop = chat.scrollHeight;
 }
@@ -207,6 +217,8 @@ function removeStreamingMessage() {
 function handleStreamChunk(request) {
   if (currentStreamingMessage && request.chunk) {
     currentStreamingMessage.textContent += request.chunk;
+    // Render markdown for streaming content
+    currentStreamingMessage.innerHTML = marked.parse(currentStreamingMessage.textContent);
     const chat = document.getElementById('chat');
     chat.scrollTop = chat.scrollHeight;
   }
@@ -214,7 +226,7 @@ function handleStreamChunk(request) {
 
 function handleStreamComplete(request) {
   if (currentStreamingMessage && request.fullText) {
-    currentStreamingMessage.textContent = request.fullText;
+    currentStreamingMessage.innerHTML = marked.parse(request.fullText);
     currentStreamingMessage.classList.remove('streaming');
 
     // Update conversation history

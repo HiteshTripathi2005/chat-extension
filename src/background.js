@@ -1,7 +1,22 @@
-import {GoogleGenAI} from '@google/genai';
+import { google } from '@ai-sdk/google';
+import { generateText, streamText } from 'ai';
 
 // Google AI API configuration
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+const GEMINI_MODEL = 'gemini-2.0-flash-exp';
+
+// Global API key storage for Vercel AI SDK
+let currentApiKey = null;
+
+// Function to set API key globally for Vercel AI SDK
+function setGlobalApiKey(apiKey) {
+  currentApiKey = apiKey;
+  // Set environment variable for Vercel AI SDK
+  if (typeof globalThis !== 'undefined') {
+    globalThis.process = globalThis.process || {};
+    globalThis.process.env = globalThis.process.env || {};
+    globalThis.process.env.GOOGLE_GENERATIVE_AI_API_KEY = apiKey;
+  }
+}
 
 // Initialize default API key for testing (remove in production)
 // const DEFAULT_API_KEY = 'add your default API key here for testing';
@@ -145,43 +160,35 @@ async function getWebpageContent() {
 }
 
 function extractPageContent() {
-  // Extract main content from the page
+  // Clone the document body to avoid modifying the original
+  const bodyClone = document.body.cloneNode(true);
+  
+  // Remove all style elements
+  const styleElements = bodyClone.querySelectorAll('style');
+  styleElements.forEach(style => style.remove());
+  
+  // Remove all link elements that are stylesheets
+  const linkElements = bodyClone.querySelectorAll('link[rel="stylesheet"]');
+  linkElements.forEach(link => link.remove());
+  
+  // Remove all script elements
+  const scriptElements = bodyClone.querySelectorAll('script');
+  scriptElements.forEach(script => script.remove());
+  
+  // Get the title and meta description
   const title = document.title || '';
   const metaDescription = document.querySelector('meta[name="description"]')?.content || '';
-
-  // Get text content from main content areas
-  const contentSelectors = [
-    'main',
-    'article',
-    '[role="main"]',
-    '.content',
-    '.post-content',
-    '.entry-content',
-    '#content',
-    '#main'
-  ];
-
-  let mainContent = '';
-  for (const selector of contentSelectors) {
-    const element = document.querySelector(selector);
-    if (element) {
-      mainContent = element.textContent.trim();
-      break;
-    }
-  }
-
-  // Fallback to body content if no main content found
-  if (!mainContent) {
-    mainContent = document.body.textContent.trim();
-  }
-
-  // Clean up the content (remove excessive whitespace)
-  mainContent = mainContent.replace(/\s+/g, ' ').substring(0, 8000); // Limit to 8000 chars
+  
+  // Get the cleaned HTML content
+  const htmlContent = bodyClone.innerHTML;
+  
+  // Clean up excessive whitespace but preserve HTML structure
+  const cleanedHtml = htmlContent.replace(/\s+/g, ' ').trim().substring(0, 10000); // Limit to 10000 chars
 
   return {
     title: title,
     description: metaDescription,
-    content: mainContent,
+    content: cleanedHtml,
     url: window.location.href
   };
 }
@@ -209,48 +216,31 @@ User's current question: ${userMessage}
 
 Please provide a helpful response:`;
 
+  console.log('Constructed AI Prompt:');
+  console.log(systemPrompt);
+  console.log("end of prompt"); 
   return systemPrompt;
 }
 
 async function callGeminiAPI(apiKey, prompt) {
-  const ai = new GoogleGenAI({apiKey: apiKey});
-
   try {
-    const result = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: [{
-        parts: [{
-          text: prompt
-        }]
-      }],
-      generationConfig: {
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 1024,
-      }
+    // Set the API key globally for Vercel AI SDK
+    setGlobalApiKey(apiKey);
+
+    const result = await generateText({
+      model: google(GEMINI_MODEL),
+      prompt: prompt,
+      temperature: 0.7,
+      maxTokens: 1024,
     });
 
-    // Extract text from the Gemini API response
-    let text = '';
-    if (result && result.candidates && result.candidates.length > 0) {
-      const candidate = result.candidates[0];
-      if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
-        text = candidate.content.parts[0].text;
-      }
-    }
-
-    if (!text) {
-      throw new Error('No text content found in Gemini API response');
-    }
-
-    return text;
+    return result.text;
 
   } catch (error) {
-    console.error('Gemini API call failed:', error);
+    console.error('Vercel AI SDK call failed:', error);
 
     // Handle specific error types
-    if (error.message.includes('API_KEY_INVALID') || error.message.includes('INVALID_ARGUMENT')) {
+    if (error.message.includes('API_KEY_INVALID') || error.message.includes('INVALID_ARGUMENT') || error.message.includes('API key is missing')) {
       throw new Error('Invalid API key. Please check your Google AI API key in settings.');
     } else if (error.message.includes('RESOURCE_EXHAUSTED') || error.message.includes('RATE_LIMIT')) {
       throw new Error('Rate limit exceeded. Please wait a moment before trying again.');
@@ -263,52 +253,38 @@ async function callGeminiAPI(apiKey, prompt) {
 }
 
 async function callGeminiAPIStream(apiKey, prompt, tabId) {
-  const ai = new GoogleGenAI({apiKey: apiKey});
-
   try {
-    const streamingResponse = await ai.models.generateContentStream({
-      model: 'gemini-2.0-flash-exp',
-      contents: [{
-        parts: [{
-          text: prompt
-        }]
-      }],
-      generationConfig: {
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 1024,
-      }
+    // Set the API key globally for Vercel AI SDK
+    setGlobalApiKey(apiKey);
+
+    const result = await streamText({
+      model: google(GEMINI_MODEL),
+      prompt: prompt,
+      temperature: 0.7,
+      maxTokens: 1024,
     });
 
     let fullText = '';
     let chunkCount = 0;
 
     // Process the streaming response
-    for await (const chunk of streamingResponse) {
-      if (chunk && chunk.candidates && chunk.candidates.length > 0) {
-        const candidate = chunk.candidates[0];
+    for await (const delta of result.textStream) {
+      const chunk = delta;
+      if (chunk) {
+        fullText += chunk;
+        chunkCount++;
 
-        if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
-          const newText = candidate.content.parts[0].text;
-
-          if (newText) {
-            fullText += newText;
-            chunkCount++;
-
-            // Send chunk to frontend (using runtime messaging for side panel)
-            try {
-              chrome.runtime.sendMessage({
-                action: 'streamChunk',
-                chunk: newText,
-                fullText: fullText,
-                isComplete: false
-              });
-            } catch (msgError) {
-              console.error('Failed to send chunk:', msgError);
-              // Don't throw here - continue with next chunk
-            }
-          }
+        // Send chunk to frontend (using runtime messaging for side panel)
+        try {
+          chrome.runtime.sendMessage({
+            action: 'streamChunk',
+            chunk: chunk,
+            fullText: fullText,
+            isComplete: false
+          });
+        } catch (msgError) {
+          console.error('Failed to send chunk:', msgError);
+          // Don't throw here - continue with next chunk
         }
       }
     }
@@ -325,11 +301,11 @@ async function callGeminiAPIStream(apiKey, prompt, tabId) {
     }
 
   } catch (error) {
-    console.error('Gemini streaming API call failed:', error);
+    console.error('Vercel AI SDK streaming call failed:', error);
 
     // Handle specific error types
     let errorMessage = 'An error occurred while streaming the response.';
-    if (error.message.includes('API_KEY_INVALID') || error.message.includes('INVALID_ARGUMENT')) {
+    if (error.message.includes('API_KEY_INVALID') || error.message.includes('INVALID_ARGUMENT') || error.message.includes('API key is missing')) {
       errorMessage = 'Invalid API key. Please check your Google AI API key in settings.';
     } else if (error.message.includes('RESOURCE_EXHAUSTED') || error.message.includes('RATE_LIMIT')) {
       errorMessage = 'Rate limit exceeded. Please wait a moment before trying again.';
