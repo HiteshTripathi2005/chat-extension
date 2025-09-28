@@ -3,6 +3,7 @@ let apiKey = '';
 let conversationHistory = [];
 let currentStreamingMessage = null;
 let isStreaming = false;
+let currentTabUrl = '';
 
 // Import marked for markdown rendering
 import { marked } from 'marked';
@@ -10,6 +11,10 @@ import { marked } from 'marked';
 // Initialize the extension
 document.addEventListener('DOMContentLoaded', function() {
   loadSettings();
+  getCurrentTabUrl().then(url => {
+    currentTabUrl = url;
+    loadConversationHistory();
+  });
   setupEventListeners();
   setupMessageListeners();
 });
@@ -39,6 +44,11 @@ function setupEventListeners() {
     saveSettings();
   });
 
+  // New chat functionality
+  document.getElementById('newChatButton').addEventListener('click', function() {
+    startNewChat();
+  });
+
   // Close button
   document.getElementById('closeButton').addEventListener('click', function() {
     window.close();
@@ -54,6 +64,8 @@ function setupMessageListeners() {
       handleStreamComplete(request);
     } else if (request.action === 'streamError') {
       handleStreamError(request);
+    } else if (request.action === 'tabChanged') {
+      handleTabChangeFromMessage(request);
     }
   });
 }
@@ -72,6 +84,70 @@ async function loadSettings() {
   } catch (error) {
     console.error('Error loading settings:', error);
   }
+}
+
+async function getCurrentTabUrl() {
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    return tabs[0]?.url || '';
+  } catch (error) {
+    console.error('Error getting current tab URL:', error);
+    return '';
+  }
+}
+
+async function loadConversationHistory() {
+  if (!currentTabUrl) return;
+  try {
+    const result = await chrome.storage.local.get([currentTabUrl]);
+    if (result[currentTabUrl]) {
+      conversationHistory = result[currentTabUrl];
+      // Re-render existing messages
+      renderConversationHistory();
+    }
+  } catch (error) {
+    console.error('Error loading conversation history:', error);
+  }
+}
+
+async function handleTabChangeFromMessage(request) {
+  const newUrl = request.url;
+
+  // If the URL hasn't changed, do nothing
+  if (newUrl === currentTabUrl) return;
+
+  // Save current history before switching
+  if (currentTabUrl) {
+    await saveConversationHistory();
+  }
+
+  // Update to new tab
+  currentTabUrl = newUrl;
+
+  // Clear current conversation
+  conversationHistory = [];
+  const chat = document.getElementById('chat');
+  chat.innerHTML = '';
+
+  // Load history for new tab
+  await loadConversationHistory();
+}
+
+async function saveConversationHistory() {
+  if (!currentTabUrl) return;
+  try {
+    await chrome.storage.local.set({ [currentTabUrl]: conversationHistory });
+  } catch (error) {
+    console.error('Error saving conversation history:', error);
+  }
+}
+
+function renderConversationHistory() {
+  const chat = document.getElementById('chat');
+  chat.innerHTML = ''; // Clear existing messages
+  conversationHistory.forEach(item => {
+    addMessage(item.content, item.role === 'user' ? 'user' : 'bot');
+  });
 }
 
 function openSettings() {
@@ -124,6 +200,39 @@ async function saveSettings() {
   }
 }
 
+async function startNewChat() {
+  // Confirm with user before clearing
+  if (!confirm('Are you sure you want to start a new chat? This will clear all conversation history for this website.')) {
+    return;
+  }
+
+  try {
+    // Clear conversation history
+    conversationHistory = [];
+
+    // Clear chat UI
+    const chat = document.getElementById('chat');
+    chat.innerHTML = '';
+
+    // Remove history from storage
+    if (currentTabUrl) {
+      await chrome.storage.local.remove([currentTabUrl]);
+    }
+
+    // Reset streaming state if active
+    if (isStreaming) {
+      isStreaming = false;
+      const sendButton = document.getElementById('sendButton');
+      sendButton.disabled = false;
+      sendButton.textContent = 'Send';
+      removeStreamingMessage();
+    }
+
+  } catch (error) {
+    console.error('Error starting new chat:', error);
+  }
+}
+
 function showStatus(message, type) {
   const statusDiv = document.getElementById('settingsStatus');
   statusDiv.textContent = message;
@@ -154,6 +263,7 @@ async function sendMessage() {
 
   // Add to conversation history
   conversationHistory.push({ role: 'user', content: message });
+  saveConversationHistory();
 
   // Add loading state and streaming indicator
   sendButton.disabled = true;
@@ -239,6 +349,9 @@ function handleStreamComplete(request) {
     if (conversationHistory.length > 20) {
       conversationHistory = conversationHistory.slice(-20);
     }
+
+    // Save updated history
+    saveConversationHistory();
   }
 
   // Reset streaming state

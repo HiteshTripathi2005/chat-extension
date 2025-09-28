@@ -40,6 +40,39 @@ chrome.runtime.onInstalled.addListener(async () => {
   }
 });
 
+// Listen for tab changes to notify side panel
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  try {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+    // Send message to side panel about tab change
+    chrome.runtime.sendMessage({
+      action: 'tabChanged',
+      url: tab.url,
+      tabId: tab.id
+    }).catch(() => {
+      // Side panel might not be open, ignore error
+    });
+  } catch (error) {
+    console.error('Error handling tab activation:', error);
+  }
+});
+
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete') {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tabs[0] && tabs[0].id === tabId) {
+      // Send message to side panel about tab update
+      chrome.runtime.sendMessage({
+        action: 'tabChanged',
+        url: tab.url,
+        tabId: tab.id
+      }).catch(() => {
+        // Side panel might not be open, ignore error
+      });
+    }
+  }
+});
+
 // Handle messages from side panel
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'askAI') {

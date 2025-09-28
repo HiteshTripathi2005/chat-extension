@@ -17,8 +17,6 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
-
-
 body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
@@ -46,11 +44,11 @@ body {
       display: flex;
       gap: 8px;
     }
-    .settings-button, .close-button {
+    .settings-button, .new-chat-button, .close-button {
       background: none;
       border: none;
       color: #cccccc;
-      font-size: 18px;
+      font-size: 15px;
       cursor: pointer;
       padding: 5px;
       border-radius: 50%;
@@ -61,13 +59,9 @@ body {
       justify-content: center;
       transition: all 0.2s ease;
     }
-    .settings-button:hover, .close-button:hover {
+    .settings-button:hover, .new-chat-button:hover, .close-button:hover {
       background: rgba(255, 255, 255, 0.1);
       color: #ffffff;
-    }
-    .close-button:hover {
-      background: rgba(255, 255, 255, 0.1);
-      transform: scale(1.1);
     }
     .chat-container {
       flex: 1;
