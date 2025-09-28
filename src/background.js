@@ -2,7 +2,7 @@ import { google } from '@ai-sdk/google';
 import { generateText, streamText } from 'ai';
 
 // Google AI API configuration
-const GEMINI_MODEL = 'gemini-2.0-flash-exp';
+const GEMINI_MODEL = 'gemini-2.0-flash';
 
 // Global API key storage for Vercel AI SDK
 let currentApiKey = null;
