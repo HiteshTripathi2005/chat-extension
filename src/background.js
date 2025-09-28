@@ -207,7 +207,14 @@ function extractPageContent() {
   // Remove all script elements
   const scriptElements = bodyClone.querySelectorAll('script');
   scriptElements.forEach(script => script.remove());
-  
+
+  // Remove CSS class and style attributes from all elements
+  const allElements = bodyClone.querySelectorAll('*');
+  allElements.forEach(element => {
+    element.removeAttribute('class');
+    element.removeAttribute('style');
+  });
+
   // Get the title and meta description
   const title = document.title || '';
   const metaDescription = document.querySelector('meta[name="description"]')?.content || '';
