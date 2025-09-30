@@ -4,6 +4,8 @@ let conversationHistory = [];
 let currentStreamingMessage = null;
 let isStreaming = false;
 let currentTabUrl = '';
+let hasSelectedElement = false;
+let selectedElementInfo = null;
 
 // Import marked for markdown rendering
 import { marked } from 'marked';
@@ -53,6 +55,16 @@ function setupEventListeners() {
   document.getElementById('closeButton').addEventListener('click', function() {
     window.close();
   });
+
+  // Element selection button
+  document.getElementById('selectElementButton').addEventListener('click', function() {
+    startElementSelection();
+  });
+
+  // Clear selection button
+  document.getElementById('clearSelectionButton').addEventListener('click', function() {
+    clearSelectedElement();
+  });
 }
 
 function setupMessageListeners() {
@@ -66,6 +78,12 @@ function setupMessageListeners() {
       handleStreamError(request);
     } else if (request.action === 'tabChanged') {
       handleTabChangeFromMessage(request);
+    } else if (request.action === 'elementSelectionComplete') {
+      handleElementSelected(request.content);
+    } else if (request.action === 'elementSelectionCancelled') {
+      handleSelectionCancelled();
+    } else if (request.action === 'selectionError') {
+      handleSelectionError(request.error);
     }
   });
 }
@@ -375,4 +393,84 @@ function handleStreamError(request) {
   const sendButton = document.getElementById('sendButton');
   sendButton.disabled = false;
   sendButton.textContent = 'Send';
+}
+
+// Element selection functions
+async function startElementSelection() {
+  try {
+    const selectButton = document.getElementById('selectElementButton');
+    selectButton.disabled = true;
+    selectButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    
+    // Request background script to start element selection
+    chrome.runtime.sendMessage({ action: 'startElementSelection' });
+    
+  } catch (error) {
+    console.error('Error starting element selection:', error);
+    const selectButton = document.getElementById('selectElementButton');
+    selectButton.disabled = false;
+    selectButton.innerHTML = '<i class="fa-solid fa-crosshairs"></i>';
+  }
+}
+
+function handleElementSelected(content) {
+  hasSelectedElement = true;
+  selectedElementInfo = content;
+  
+  // Update UI to show selection
+  const banner = document.getElementById('selectedElementBanner');
+  const bannerText = document.getElementById('selectedElementText');
+  
+  let elementDescription = content.tagName;
+  if (content.id) {
+    elementDescription += `#${content.id}`;
+  } else if (content.classes) {
+    const firstClass = content.classes.split(' ')[0];
+    if (firstClass) {
+      elementDescription += `.${firstClass}`;
+    }
+  }
+  
+  bannerText.textContent = `Selected: <${elementDescription}>`;
+  banner.style.display = 'flex';
+  
+  // Reset select button
+  const selectButton = document.getElementById('selectElementButton');
+  selectButton.disabled = false;
+  selectButton.innerHTML = '<i class="fa-solid fa-crosshairs"></i>';
+  
+  // Show confirmation message
+  addMessage(`Element selected: <${elementDescription}>. Your next questions will focus on this element.`, 'bot');
+}
+
+function handleSelectionCancelled() {
+  // Reset select button
+  const selectButton = document.getElementById('selectElementButton');
+  selectButton.disabled = false;
+  selectButton.innerHTML = '<i class="fa-solid fa-crosshairs"></i>';
+}
+
+function handleSelectionError(error) {
+  // Reset select button
+  const selectButton = document.getElementById('selectElementButton');
+  selectButton.disabled = false;
+  selectButton.innerHTML = '<i class="fa-solid fa-crosshairs"></i>';
+  
+  // Show error message
+  addMessage(error || 'Failed to start element selection. Please try again.', 'bot');
+}
+
+async function clearSelectedElement() {
+  hasSelectedElement = false;
+  selectedElementInfo = null;
+  
+  // Hide banner
+  const banner = document.getElementById('selectedElementBanner');
+  banner.style.display = 'none';
+  
+  // Clear selection in background
+  await chrome.runtime.sendMessage({ action: 'clearSelectedElement' });
+  
+  // Show confirmation
+  addMessage('Selection cleared. Returning to full page context.', 'bot');
 }

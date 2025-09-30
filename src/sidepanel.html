@@ -9,6 +9,9 @@
   <div class="header">
     <div class="header-title">AI Webpage Assistant</div>
     <div class="header-buttons">
+      <button class="select-element-button" id="selectElementButton" title="Select Element">
+        <i class="fa-solid fa-crosshairs"></i>
+      </button>
       <button class="settings-button" id="settingsButton" title="Settings">
         <i class="fa-solid fa-gear"></i>
       </button>
@@ -20,6 +23,18 @@
       </button>
     </div>
   </div>
+  
+  <!-- Selected Element Indicator -->
+  <div class="selected-element-banner" id="selectedElementBanner" style="display: none;">
+    <div class="banner-content">
+      <i class="fa-solid fa-bullseye"></i>
+      <span id="selectedElementText">Element selected</span>
+    </div>
+    <button class="clear-selection-button" id="clearSelectionButton" title="Clear Selection">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+  
   <div class="chat-container" id="chat"></div>
   
   <!-- Settings Panel -->

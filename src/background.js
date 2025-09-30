@@ -6,6 +6,7 @@ const GEMINI_MODEL = 'gemini-2.0-flash';
 
 // Global API key storage for Vercel AI SDK
 let currentApiKey = null;
+let selectedElementContent = null; // Store selected element content
 
 // Function to set API key globally for Vercel AI SDK
 function setGlobalApiKey(apiKey) {
@@ -81,8 +82,53 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'askAIStream') {
     handleAIRequestStream(request, sender);
     return true; // Keep message channel open for streaming
+  } else if (request.action === 'startElementSelection') {
+    startElementSelection();
+    sendResponse({ success: true });
+    return true;
+  } else if (request.action === 'elementSelected') {
+    selectedElementContent = request.content;
+    // Notify side panel that element was selected
+    chrome.runtime.sendMessage({ 
+      action: 'elementSelectionComplete',
+      content: request.content 
+    }).catch(() => {});
+    sendResponse({ success: true });
+    return true;
+  } else if (request.action === 'selectionCancelled') {
+    selectedElementContent = null;
+    chrome.runtime.sendMessage({ action: 'elementSelectionCancelled' }).catch(() => {});
+    sendResponse({ success: true });
+    return true;
+  } else if (request.action === 'clearSelectedElement') {
+    selectedElementContent = null;
+    sendResponse({ success: true });
+    return true;
   }
 });
+
+// Function to start element selection mode
+async function startElementSelection() {
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tabs[0] || !tabs[0].url || (!tabs[0].url.startsWith('http://') && !tabs[0].url.startsWith('https://'))) {
+      chrome.runtime.sendMessage({ 
+        action: 'selectionError',
+        error: 'Element selection is only available on web pages.'
+      }).catch(() => {});
+      return;
+    }
+
+    // Send message to content script to start selection
+    await chrome.tabs.sendMessage(tabs[0].id, { action: 'startSelection' });
+  } catch (error) {
+    console.error('Error starting element selection:', error);
+    chrome.runtime.sendMessage({ 
+      action: 'selectionError',
+      error: 'Failed to start element selection. Please refresh the page and try again.'
+    }).catch(() => {});
+  }
+}
 
 async function handleAIRequest(request, sendResponse) {
   try {
@@ -167,6 +213,17 @@ async function handleAIRequestStream(request, sender) {
 
 async function getWebpageContent() {
   try {
+    // If user has selected a specific element, use that instead
+    if (selectedElementContent) {
+      return {
+        title: `Selected: ${selectedElementContent.tagName}${selectedElementContent.id ? '#' + selectedElementContent.id : ''}`,
+        description: `Selected element from ${selectedElementContent.url}`,
+        content: selectedElementContent.content,
+        url: selectedElementContent.url,
+        isSelectedElement: true
+      };
+    }
+    
     // Get the active tab                               
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
 
@@ -234,20 +291,23 @@ function extractPageContent() {
 }
 
 function buildAIPrompt(userMessage, webpageContent, history = []) {
-  const systemPrompt = `You are an AI assistant helping a user understand and interact with a webpage. You have access to the webpage's content, title, and metadata.
+  const isSelectedElement = webpageContent.isSelectedElement || false;
+  
+  const systemPrompt = `You are an AI assistant helping a user understand and interact with ${isSelectedElement ? 'a selected element from' : ''} a webpage. You have access to the ${isSelectedElement ? 'selected element\'s' : 'webpage\'s'} content, title, and metadata.
 
-Webpage Information:
+${isSelectedElement ? 'Selected Element' : 'Webpage'} Information:
 - Title: ${webpageContent.title}
 - Description: ${webpageContent.description}
 - URL: ${webpageContent.url}
 - Content: ${webpageContent.content}
 
 Instructions:
-1. Be helpful and provide accurate information based on the webpage content
-2. If the user asks about something not in the webpage, politely explain that
+1. Be helpful and provide accurate information based on the ${isSelectedElement ? 'selected element' : 'webpage'} content
+2. If the user asks about something not in the ${isSelectedElement ? 'selected element' : 'webpage'}, politely explain that
 3. Keep responses concise but informative
 4. Use the conversation history to maintain context
 5. If appropriate, suggest related actions or questions
+${isSelectedElement ? '6. Focus specifically on the selected element rather than the entire page' : ''}
 
 Previous conversation:
 ${history.map(msg => `${msg.role}: ${msg.content}`).join('\n')}

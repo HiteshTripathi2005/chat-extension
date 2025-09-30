@@ -6,6 +6,7 @@ An intelligent Chrome extension that transforms any webpage into an interactive 
 
 ### Core AI Capabilities
 - **Context-Aware Chat**: Ask questions about the current webpage content
+- **🎯 Element Selection**: Select specific DOM elements for focused AI analysis (NEW!)
 - **Smart Summarization**: Get concise summaries of articles, documents, and long pages
 - **Content Analysis**: Sentiment analysis, topic extraction, and readability scoring
 - **Question Answering**: Natural language queries about webpage information
@@ -14,6 +15,7 @@ An intelligent Chrome extension that transforms any webpage into an interactive 
 ### Advanced Features
 - **Real-time Responses**: Powered by Gemini 2.0 Flash for fast, accurate answers
 - **Conversation Memory**: Maintains context across multiple interactions
+- **Selective Context**: Choose specific page elements to analyze (reduces token usage!)
 - **Action Suggestions**: Smart recommendations based on page content
 - **Privacy-First**: Content processed securely with user consent
 
@@ -53,6 +55,17 @@ An intelligent Chrome extension that transforms any webpage into an interactive 
 3. Type your question or request in the input field
 4. Press Enter or click Send
 
+### 🎯 Element Selection (NEW!)
+1. Click the crosshairs icon (🎯) in the side panel header
+2. Hover over elements on the page (they'll highlight in blue)
+3. Click on the element you want to analyze
+4. Ask questions - the AI will focus only on that element!
+5. Click the ✕ on the purple banner to clear selection
+
+**Benefits**: Reduces token usage, improves accuracy, and provides focused responses!
+
+📖 [Full Element Selection Guide](ELEMENT_SELECTION_GUIDE.md)
+
 ### Example Queries
 - "Summarize this article"
 - "What are the main points discussed here?"
@@ -60,6 +73,13 @@ An intelligent Chrome extension that transforms any webpage into an interactive 
 - "What is the sentiment of this review?"
 - "Extract the contact information"
 - "Explain this technical concept"
+
+### 🎯 Element-Specific Queries
+- Select a code block → "Explain this code"
+- Select an article → "What's the main argument?"
+- Select a product description → "List the key features"
+- Select a comment section → "What's the general sentiment?"
+- Select a form → "What information is required?"
 
 ### Advanced Features
 - **Page Analysis**: "Analyze the tone of this article"
@@ -71,21 +91,23 @@ An intelligent Chrome extension that transforms any webpage into an interactive 
 ### Phase 1: Foundation (Current)
 - ✅ Basic extension structure
 - ✅ Side panel UI
-- 🔄 Google AI API integration
-- 🔄 Secure API key management
-- 🔄 Basic chat functionality
+- ✅ Google AI API integration
+- ✅ Secure API key management
+- ✅ Basic chat functionality
 
 ### Phase 2: Enhanced Features
-- 🔄 Webpage content extraction
-- 🔄 Conversation memory
-- 🔄 Typing indicators and better UX
-- 🔄 Error handling and retry logic
+- ✅ Webpage content extraction
+- ✅ Conversation memory
+- ✅ Typing indicators and better UX
+- ✅ Error handling and retry logic
+- ✅ Element selection for focused context (NEW!)
 
 ### Phase 3: Advanced Capabilities
-- 🔄 Response streaming for real-time feel
+- ✅ Response streaming for real-time feel
 - 🔄 Custom prompt templates
 - 🔄 Multi-modal content support
 - 🔄 Usage analytics and insights
+- 🔄 Multi-element selection
 
 ### Phase 4: Production Ready
 - 🔄 Comprehensive testing
@@ -99,8 +121,11 @@ An intelligent Chrome extension that transforms any webpage into an interactive 
 ├── manifest.json          # Extension configuration and permissions
 ├── logo.png              # Extension icon
 ├── README.md             # This documentation
+├── ELEMENT_SELECTION_FEATURE.md  # Element selection documentation
+├── ELEMENT_SELECTION_GUIDE.md    # Element selection quick start
 └── src/
     ├── background.js     # Service worker for API calls and coordination
+    ├── content.js        # Content script for DOM element selection
     ├── sidepanel.html    # Main UI layout and styling
     ├── sidepanel.js      # Chat logic and user interactions
     └── index.css         # Styles for the side panel
