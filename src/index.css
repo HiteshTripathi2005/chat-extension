@@ -328,7 +328,7 @@ body {
     }
     
     #sendButton {
-      padding: 11px 24px;
+      padding: 10px;
       border: none;
       border-radius: 10px;
       background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
@@ -338,7 +338,9 @@ body {
       font-weight: 600;
       font-family: inherit;
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      min-width: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
     }
     

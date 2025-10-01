@@ -242,7 +242,7 @@ async function startNewChat() {
       isStreaming = false;
       const sendButton = document.getElementById('sendButton');
       sendButton.disabled = false;
-      sendButton.textContent = 'Send';
+      sendButton.innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
       removeStreamingMessage();
     }
 
@@ -285,7 +285,7 @@ async function sendMessage() {
 
   // Add loading state and streaming indicator
   sendButton.disabled = true;
-  sendButton.textContent = 'Thinking...';
+  sendButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
   isStreaming = true;
 
   // Create streaming message placeholder
@@ -304,7 +304,7 @@ async function sendMessage() {
     removeStreamingMessage();
     addMessage('Sorry, I encountered an error. Please try again.', 'bot');
     sendButton.disabled = false;
-    sendButton.textContent = 'Send';
+    sendButton.innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
     isStreaming = false;
   }
 }
@@ -379,7 +379,7 @@ function handleStreamComplete(request) {
   // Reset button
   const sendButton = document.getElementById('sendButton');
   sendButton.disabled = false;
-  sendButton.textContent = 'Send';
+  sendButton.innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
 }
 
 function handleStreamError(request) {
@@ -392,7 +392,7 @@ function handleStreamError(request) {
   // Reset button
   const sendButton = document.getElementById('sendButton');
   sendButton.disabled = false;
-  sendButton.textContent = 'Send';
+  sendButton.innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
 }
 
 // Element selection functions

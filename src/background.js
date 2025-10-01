@@ -1,5 +1,5 @@
 import { google } from '@ai-sdk/google';
-import { generateText, streamText } from 'ai';
+import { streamText } from 'ai';
 
 // Google AI API configuration
 const GEMINI_MODEL = 'gemini-2.0-flash';
@@ -76,10 +76,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
 // Handle messages from side panel
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'askAI') {
-    handleAIRequest(request, sendResponse);
-    return true; // Keep message channel open for async response
-  } else if (request.action === 'askAIStream') {
+  if (request.action === 'askAIStream') {
     handleAIRequestStream(request, sender);
     return true; // Keep message channel open for streaming
   } else if (request.action === 'startElementSelection') {
@@ -127,34 +124,6 @@ async function startElementSelection() {
       action: 'selectionError',
       error: 'Failed to start element selection. Please refresh the page and try again.'
     }).catch(() => {});
-  }
-}
-
-async function handleAIRequest(request, sendResponse) {
-  try {
-    // Get API key from storage
-    const result = await chrome.storage.sync.get(['geminiApiKey']);
-    const apiKey = result.geminiApiKey;
-
-    if (!apiKey) {
-      sendResponse({ error: 'API key not configured. Please set your Google AI API key in settings.' });
-      return;
-    }
-
-    // Get webpage content
-    const webpageContent = await getWebpageContent();
-
-    // Prepare the AI prompt
-    const prompt = buildAIPrompt(request.message, webpageContent, request.history);
-
-    // Make API call to Gemini
-    const aiResponse = await callGeminiAPI(apiKey, prompt);
-
-    sendResponse({ reply: aiResponse });
-
-  } catch (error) {
-    console.error('AI request error:', error);
-    sendResponse({ error: error.message || 'An error occurred while processing your request.' });
   }
 }
 
@@ -322,36 +291,6 @@ Please provide a helpful response:`;
   return systemPrompt;
 }
 
-async function callGeminiAPI(apiKey, prompt) {
-  try {
-    // Set the API key globally for Vercel AI SDK
-    setGlobalApiKey(apiKey);
-
-    const result = await generateText({
-      model: google(GEMINI_MODEL),
-      prompt: prompt,
-      temperature: 0.7,
-      maxTokens: 1024,
-    });
-
-    return result.text;
-
-  } catch (error) {
-    console.error('Vercel AI SDK call failed:', error);
-
-    // Handle specific error types
-    if (error.message.includes('API_KEY_INVALID') || error.message.includes('INVALID_ARGUMENT') || error.message.includes('API key is missing')) {
-      throw new Error('Invalid API key. Please check your Google AI API key in settings.');
-    } else if (error.message.includes('RESOURCE_EXHAUSTED') || error.message.includes('RATE_LIMIT')) {
-      throw new Error('Rate limit exceeded. Please wait a moment before trying again.');
-    } else if (error.message.includes('QUOTA_EXCEEDED')) {
-      throw new Error('API quota exceeded. Please check your Google AI Studio account.');
-    }
-
-    throw error;
-  }
-}
-
 async function callGeminiAPIStream(apiKey, prompt, tabId) {
   try {
     // Set the API key globally for Vercel AI SDK
@@ -361,7 +300,7 @@ async function callGeminiAPIStream(apiKey, prompt, tabId) {
       model: google(GEMINI_MODEL),
       prompt: prompt,
       temperature: 0.7,
-      maxTokens: 1024,
+      onFinish: () => { console.log('Streaming complete'); }
     });
 
     let fullText = '';
