@@ -1,6 +1,6 @@
 import { google } from '@ai-sdk/google';
 import { stepCountIs, streamText } from 'ai';
-import { buildAIPrompt } from '../../../client/src/utils/prompt.js';
+import { buildAIPrompt } from '../utils/prompt.js';
 import { timeTool } from '../tools/time-tool.js';
 
 // Google AI API configuration
