@@ -1,0 +1,23 @@
+{
+  "name": "chat-extension-server",
+  "version": "1.0.0",
+  "description": "Express.js backend server for AI webpage assistant",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "server": "node index.js",
+    "server:dev": "nodemon index.js"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^2.0.14",
+    "ai": "^5.0.45",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "zod": "^4.1.11"
+  }
+}

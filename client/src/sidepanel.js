@@ -353,11 +353,11 @@ function handleStreamChunk(request) {
 }
 
 function handleStreamComplete(request) {
-  if (currentStreamingMessage && request.fullText) {
-    currentStreamingMessage.innerHTML = marked.parse(request.fullText);
+  if (currentStreamingMessage && request.displayText) {
+    currentStreamingMessage.innerHTML = marked.parse(request.displayText);
     currentStreamingMessage.classList.remove('streaming');
 
-    // Update conversation history
+    // Update conversation history with fullText (includes tool outputs for context)
     const lastUserMessage = conversationHistory[conversationHistory.length - 1];
     if (lastUserMessage && lastUserMessage.role === 'user') {
       conversationHistory.push({ role: 'assistant', content: request.fullText });

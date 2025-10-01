@@ -1,25 +1,9 @@
-import { google } from '@ai-sdk/google';
-import { streamText } from 'ai';
-import { buildAIPrompt } from './utils/prompt.js';
-import { timeTool } from './tools/time-tool.js';
+// Express server configuration
+const EXPRESS_SERVER_URL = 'http://localhost:3000';
 
-// Google AI API configuration
-const GEMINI_MODEL = 'gemini-2.0-flash';
-
-// Global API key storage for Vercel AI SDK
+// Global state
 let currentApiKey = null;
 let selectedElementContent = null; // Store selected element content
-
-// Function to set API key globally for Vercel AI SDK
-function setGlobalApiKey(apiKey) {
-  currentApiKey = apiKey;
-  // Set environment variable for Vercel AI SDK
-  if (typeof globalThis !== 'undefined') {
-    globalThis.process = globalThis.process || {};
-    globalThis.process.env = globalThis.process.env || {};
-    globalThis.process.env.GOOGLE_GENERATIVE_AI_API_KEY = apiKey;
-  }
-}
 
 // Initialize default API key for testing (remove in production)
 // const DEFAULT_API_KEY = 'add your default API key here for testing';
@@ -164,11 +148,8 @@ async function handleAIRequestStream(request, sender) {
     // Get webpage content
     const webpageContent = await getWebpageContent();
 
-    // Prepare the AI prompt
-    const messages = buildAIPrompt(request.message, webpageContent, request.history);
-
-    // Make streaming API call to Gemini
-    await callGeminiAPIStream(apiKey, messages, tabId);
+    // Make streaming request to Express server
+    await callExpressServerStream(apiKey, request.message, webpageContent, request.history, tabId);
 
   } catch (error) {
     console.error('AI streaming request error:', error);
@@ -262,66 +243,135 @@ function extractPageContent() {
   };
 }
 
-async function callGeminiAPIStream(apiKey, messages, tabId) {
+async function callExpressServerStream(apiKey, message, webpageContent, history, tabId) {
   try {
-    // Set the API key globally for Vercel AI SDK
-    setGlobalApiKey(apiKey);
-
-    const result = await streamText({
-      model: google(GEMINI_MODEL),
-      messages: messages,
-      temperature: 0.7,
-      // tools: {timeTool},
-      onFinish: () => { console.log('Streaming complete'); }
+    // Make request to Express server
+    const response = await fetch(`${EXPRESS_SERVER_URL}/api/ai/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: message,
+        webpageContent: webpageContent,
+        history: history || [],
+        apiKey: apiKey
+      })
     });
 
-    let fullText = '';
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Server error: ${response.status}`);
+    }
+
+    // Process SSE stream from Vercel AI SDK format
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullText = ''; // For conversation history (includes tool outputs)
+    let displayText = ''; // For UI display (only AI text responses)
     let chunkCount = 0;
 
-    // Process the streaming response
-    for await (const delta of result.textStream) {
-      const chunk = delta;
-      if (chunk) {
-        fullText += chunk;
-        chunkCount++;
+    while (true) {
+      const { done, value } = await reader.read();
+      
+      if (done) break;
 
-        // Send chunk to frontend (using runtime messaging for side panel)
-        try {
-          chrome.runtime.sendMessage({
-            action: 'streamChunk',
-            chunk: chunk,
-            fullText: fullText,
-            isComplete: false
-          });
-        } catch (msgError) {
-          console.error('Failed to send chunk:', msgError);
-          // Don't throw here - continue with next chunk
+      // Decode and append to buffer
+      buffer += decoder.decode(value, { stream: true });
+
+      // Process complete SSE messages
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const dataStr = line.slice(6);
+            
+            // Handle [DONE] marker
+            if (dataStr === '[DONE]') {
+              // Send completion message with both texts
+              chrome.runtime.sendMessage({
+                action: 'streamComplete',
+                displayText: displayText, // For UI display
+                fullText: fullText, // For conversation history
+                chunkCount: chunkCount
+              }).catch(() => {});
+              continue;
+            }
+
+            const data = JSON.parse(dataStr);
+
+            // Handle Vercel AI SDK streaming format
+            if (data.type === 'text-delta' && data.delta) {
+              fullText += data.delta; // For conversation history
+              displayText += data.delta; // For UI display
+              chunkCount++;
+
+              // Send chunk to frontend
+              chrome.runtime.sendMessage({
+                action: 'streamChunk',
+                chunk: data.delta,
+                displayText: displayText, // For UI display
+                fullText: fullText, // For conversation history
+                isComplete: false
+              }).catch(() => {});
+            } else if (data.type === 'tool-output-available' && data.output) {
+              // Handle tool outputs (accumulate for history but don't send to UI)
+              const outputText = typeof data.output === 'string' ? data.output : JSON.stringify(data.output);
+              fullText += outputText; // Only add to conversation history
+              // Note: Not sending tool outputs to UI, only text responses
+            } else if (data.type === 'tool-output-error' && data.errorText) {
+              // Handle tool errors - send to UI
+              const errorText = `Error: ${data.errorText}`;
+              fullText += errorText; // For conversation history
+              displayText += errorText; // For UI display
+              chunkCount++;
+
+              // Send error chunk to frontend
+              chrome.runtime.sendMessage({
+                action: 'streamChunk',
+                chunk: errorText,
+                displayText: displayText, // For UI display
+                fullText: fullText, // For conversation history
+                isComplete: false
+              }).catch(() => {});
+            } else if (data.type === 'text-end' || data.type === 'finish') {
+              // Text streaming completed
+              chrome.runtime.sendMessage({
+                action: 'streamComplete',
+                displayText: displayText, // For UI display
+                fullText: fullText, // For conversation history
+                chunkCount: chunkCount
+              }).catch(() => {});
+            } else if (data.type === 'error') {
+              throw new Error(data.error || 'Streaming error');
+            }
+            // Ignore other event types (start, start-step, tool-input-start, tool-input-delta, tool-input-available, finish-step)
+          } catch (parseError) {
+            console.error('Error parsing SSE data:', parseError, 'Line:', line);
+          }
         }
       }
     }
 
-    // Send completion message
-    try {
-      chrome.runtime.sendMessage({
-        action: 'streamComplete',
-        fullText: fullText,
-        chunkCount: chunkCount
-      });
-    } catch (msgError) {
-      console.error('Failed to send completion:', msgError);
-    }
-
   } catch (error) {
-    console.error('Vercel AI SDK streaming call failed:', error);
+    console.error('Express server streaming call failed:', error);
 
     // Handle specific error types
     let errorMessage = 'An error occurred while streaming the response.';
-    if (error.message.includes('API_KEY_INVALID') || error.message.includes('INVALID_ARGUMENT') || error.message.includes('API key is missing')) {
+    
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      errorMessage = 'Cannot connect to AI server. Please make sure the server is running on http://localhost:3000';
+    } else if (error.message.includes('Invalid API key')) {
       errorMessage = 'Invalid API key. Please check your Google AI API key in settings.';
-    } else if (error.message.includes('RESOURCE_EXHAUSTED') || error.message.includes('RATE_LIMIT')) {
+    } else if (error.message.includes('Rate limit exceeded')) {
       errorMessage = 'Rate limit exceeded. Please wait a moment before trying again.';
-    } else if (error.message.includes('QUOTA_EXCEEDED')) {
+    } else if (error.message.includes('API quota exceeded')) {
       errorMessage = 'API quota exceeded. Please check your Google AI Studio account.';
+    } else if (error.message) {
+      errorMessage = error.message;
     }
 
     // Send error to frontend
