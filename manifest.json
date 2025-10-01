@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "AI Webpage Assistant",
+  "name": "Zenix",
   "version": "2.0",
   "description": "Transform any webpage into an interactive AI assistant powered by Google Gemini 2.0 Flash",
   "icons": {
@@ -21,7 +21,7 @@
     "default_path": "src/sidepanel.html"
   },
   "action": {
-    "default_title": "Open AI Assistant",
+    "default_title": "Open Zenix",
     "default_icon": "/logo.png"
   },
   "background": {

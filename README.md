@@ -1,4 +1,4 @@
-# AI Webpage Assistant - Gemini Powered
+# Zenix - Gemini Powered
 
 An intelligent Chrome extension that transforms any webpage into an interactive AI assistant using Google's Gemini 2.0 Flash model. Ask questions, get summaries, analyze content, and more - all while browsing.
 

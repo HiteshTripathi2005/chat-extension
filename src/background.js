@@ -1,5 +1,7 @@
 import { google } from '@ai-sdk/google';
 import { streamText } from 'ai';
+import { buildAIPrompt } from './utils/prompt.js';
+import { timeTool } from './tools/time-tool.js';
 
 // Google AI API configuration
 const GEMINI_MODEL = 'gemini-2.0-flash';
@@ -78,6 +80,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'askAIStream') {
     handleAIRequestStream(request, sender);
+    sendResponse({ success: true }); // Acknowledge the request immediately
     return true; // Keep message channel open for streaming
   } else if (request.action === 'startElementSelection') {
     startElementSelection();
@@ -162,10 +165,10 @@ async function handleAIRequestStream(request, sender) {
     const webpageContent = await getWebpageContent();
 
     // Prepare the AI prompt
-    const prompt = buildAIPrompt(request.message, webpageContent, request.history);
+    const messages = buildAIPrompt(request.message, webpageContent, request.history);
 
     // Make streaming API call to Gemini
-    await callGeminiAPIStream(apiKey, prompt, tabId);
+    await callGeminiAPIStream(apiKey, messages, tabId);
 
   } catch (error) {
     console.error('AI streaming request error:', error);
@@ -259,47 +262,16 @@ function extractPageContent() {
   };
 }
 
-function buildAIPrompt(userMessage, webpageContent, history = []) {
-  const isSelectedElement = webpageContent.isSelectedElement || false;
-  
-  const systemPrompt = `You are an AI assistant helping a user understand and interact with ${isSelectedElement ? 'a selected element from' : ''} a webpage. You have access to the ${isSelectedElement ? 'selected element\'s' : 'webpage\'s'} content, title, and metadata.
-
-${isSelectedElement ? 'Selected Element' : 'Webpage'} Information:
-- Title: ${webpageContent.title}
-- Description: ${webpageContent.description}
-- URL: ${webpageContent.url}
-- Content: ${webpageContent.content}
-
-Instructions:
-1. Be helpful and provide accurate information based on the ${isSelectedElement ? 'selected element' : 'webpage'} content
-2. If the user asks about something not in the ${isSelectedElement ? 'selected element' : 'webpage'}, politely explain that
-3. Keep responses concise but informative
-4. Use the conversation history to maintain context
-5. If appropriate, suggest related actions or questions
-${isSelectedElement ? '6. Focus specifically on the selected element rather than the entire page' : ''}
-
-Previous conversation:
-${history.map(msg => `${msg.role}: ${msg.content}`).join('\n')}
-
-User's current question: ${userMessage}
-
-Please provide a helpful response:`;
-
-  console.log('Constructed AI Prompt:');
-  console.log(systemPrompt);
-  console.log("end of prompt"); 
-  return systemPrompt;
-}
-
-async function callGeminiAPIStream(apiKey, prompt, tabId) {
+async function callGeminiAPIStream(apiKey, messages, tabId) {
   try {
     // Set the API key globally for Vercel AI SDK
     setGlobalApiKey(apiKey);
 
     const result = await streamText({
       model: google(GEMINI_MODEL),
-      prompt: prompt,
+      messages: messages,
       temperature: 0.7,
+      // tools: {timeTool},
       onFinish: () => { console.log('Streaming complete'); }
     });
 
