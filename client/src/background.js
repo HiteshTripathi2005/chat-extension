@@ -1,5 +1,5 @@
 // Express server configuration
-const EXPRESS_SERVER_URL = 'http://localhost:3000';
+const EXPRESS_SERVER_URL = 'https://chat-extension-production.up.railway.app';
 
 // Global state
 let currentApiKey = null;
